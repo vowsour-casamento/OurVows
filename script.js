@@ -71,20 +71,32 @@ class OurVowsApp {
             imgbbKey: '9f9e6c35b078c42f5ea619aef46f2791'
         };
 
+        this.ownerCode = '2409JV';
+        this.isOwnerAuthorized = false;
+
         this.supabaseClient = null;
         this.viewMode = 'owner';
         this.guestEventFilter = 'all';
+
+        this.remoteSyncTimer = null;
+        this.lastRemoteUpdatedAt = null;
 
         this.calendarInstance = null;
         this.mapInstance = null;
         this.mapLayerGroup = null;
         
-        this.init();
+        this.init().catch(() => {
+            this.loadData();
+            this.setupEventListeners();
+            this.updateDashboard();
+            this.startCountdown();
+        });
     }
 
-    init() {
+    async init() {
         this.loadData();
         this.initSupabaseClient();
+        await this.syncStateFromSupabase();
         this.setupEventListeners();
         this.updateDashboard();
         this.startCountdown();
@@ -128,7 +140,94 @@ class OurVowsApp {
     }
 
     saveData() {
+        this.saveDataLocalOnly();
+        this.scheduleRemoteStateSave();
+    }
+
+    saveDataLocalOnly() {
         localStorage.setItem('ourVowsData', JSON.stringify(this.data));
+    }
+
+    async syncStateFromSupabase() {
+        this.applyViewMode();
+        const sb = this.supabaseClient || this.initSupabaseClient();
+        if (!sb) return;
+
+        const { data, error } = await sb
+            .from('app_state')
+            .select('*')
+            .eq('id', 'default')
+            .maybeSingle();
+
+        if (error) return;
+
+        const remoteUpdatedAt = data?.updated_at || null;
+        const remotePayload = data?.data || null;
+
+        const localRemoteUpdatedAt = localStorage.getItem('ourVowsRemoteUpdatedAt');
+        const localRemoteMs = localRemoteUpdatedAt ? Date.parse(localRemoteUpdatedAt) : 0;
+        const remoteMs = remoteUpdatedAt ? Date.parse(remoteUpdatedAt) : 0;
+
+        if (remotePayload && remoteMs && remoteMs > localRemoteMs) {
+            this.data = {
+                ...this.data,
+                ...(remotePayload || {}),
+                budget: {
+                    ...this.data.budget,
+                    ...((remotePayload || {}).budget || {})
+                },
+                vendors: (remotePayload || {}).vendors || [],
+                timeline: (remotePayload || {}).timeline || [],
+                notes: (remotePayload || {}).notes || [],
+                checklist: (remotePayload || {}).checklist || [],
+                gifts: (remotePayload || {}).gifts || [],
+                calendar: (remotePayload || {}).calendar || [],
+                mapMarkers: (remotePayload || {}).mapMarkers || [],
+                homeExpenses: (remotePayload || {}).homeExpenses || []
+            };
+            this.saveDataLocalOnly();
+            localStorage.setItem('ourVowsRemoteUpdatedAt', remoteUpdatedAt);
+            this.lastRemoteUpdatedAt = remoteUpdatedAt;
+        } else if (!data && this.canWriteSupabaseState()) {
+            await this.upsertStateToSupabase();
+        }
+    }
+
+    scheduleRemoteStateSave() {
+        if (!this.canWriteSupabaseState()) return;
+        if (this.remoteSyncTimer) window.clearTimeout(this.remoteSyncTimer);
+        this.remoteSyncTimer = window.setTimeout(() => {
+            this.upsertStateToSupabase();
+        }, 600);
+    }
+
+    async upsertStateToSupabase() {
+        if (!this.canWriteSupabaseState()) return false;
+        const sb = this.supabaseClient || this.initSupabaseClient();
+        if (!sb) return false;
+
+        const payload = {
+            id: 'default',
+            data: this.data
+        };
+
+        const { data, error } = await sb
+            .from('app_state')
+            .upsert(payload, { onConflict: 'id' })
+            .select('updated_at')
+            .maybeSingle();
+
+        if (error) return false;
+        const updatedAt = data?.updated_at || null;
+        if (updatedAt) {
+            localStorage.setItem('ourVowsRemoteUpdatedAt', updatedAt);
+            this.lastRemoteUpdatedAt = updatedAt;
+        }
+        return true;
+    }
+
+    canWriteSupabaseState() {
+        return this.viewMode !== 'guest' && this.isOwnerAuthorized;
     }
 
     // Navigation
@@ -323,6 +422,9 @@ class OurVowsApp {
     }
 
     showSection(sectionId) {
+        if (this.viewMode === 'guest' && sectionId !== 'teas') {
+            sectionId = 'teas';
+        }
         // Update navigation
         document.querySelectorAll('.nav-link').forEach(link => {
             link.classList.remove('active');
@@ -378,17 +480,24 @@ class OurVowsApp {
         const params = new URLSearchParams(window.location.search);
         const view = (params.get('view') || '').toLowerCase();
         const event = (params.get('event') || '').toLowerCase();
-        return { view, event };
+        const owner = (params.get('owner') || '').trim();
+        return { view, event, owner };
     }
 
     applyViewMode() {
-        const { view, event } = this.getQueryParams();
+        const { view, event, owner } = this.getQueryParams();
+
+        const ownerRaw = String(owner || '').trim();
+        this.isOwnerAuthorized = ownerRaw && ownerRaw.toUpperCase() === String(this.ownerCode).toUpperCase();
+
         if (view === 'guest') {
             this.viewMode = 'guest';
             this.guestEventFilter = event || 'all';
         } else {
             this.viewMode = 'owner';
         }
+
+        document.body.classList.toggle('guest-mode', this.viewMode === 'guest');
 
         const hint = document.getElementById('gift-view-hint');
         if (hint) {
@@ -399,7 +508,7 @@ class OurVowsApp {
 
         const settingsForm = document.getElementById('gift-settings-form');
         const giftForm = document.getElementById('gift-form');
-        if (this.viewMode === 'guest') {
+        if (this.viewMode === 'guest' || !this.isOwnerAuthorized) {
             if (settingsForm) settingsForm.closest('.card')?.classList.add('hidden');
             if (giftForm) giftForm.closest('.card')?.classList.add('hidden');
         } else {
@@ -418,6 +527,13 @@ class OurVowsApp {
                 giftShareBtn.classList.add('hidden');
             } else {
                 giftShareBtn.classList.remove('hidden');
+            }
+        }
+
+        if (this.viewMode === 'guest') {
+            const teasSection = document.getElementById('teas');
+            if (teasSection && !teasSection.classList.contains('active')) {
+                this.showSection('teas');
             }
         }
     }
@@ -533,6 +649,10 @@ class OurVowsApp {
         const sb = this.supabaseClient || this.initSupabaseClient();
         if (!sb) return false;
 
+        if (!this.isOwnerAuthorized) {
+            return false;
+        }
+
         const payload = {
             id: String(gift.id),
             event: gift.event,
@@ -584,6 +704,10 @@ class OurVowsApp {
     async deleteGiftFromSupabase(giftId) {
         const sb = this.supabaseClient || this.initSupabaseClient();
         if (!sb) return false;
+
+        if (!this.isOwnerAuthorized) {
+            return false;
+        }
         const { error } = await sb.from('gifts').delete().eq('id', String(giftId));
         if (error) {
             this.showNotification('Falha ao excluir (Supabase).');

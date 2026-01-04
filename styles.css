@@ -20,6 +20,18 @@ body {
         );
 }
 
+body.guest-mode .nav {
+    display: none;
+}
+
+body.guest-mode .section {
+    display: none;
+}
+
+body.guest-mode .section#teas {
+    display: block;
+}
+
 /* Utilities */
 .hidden {
     display: none !important;
