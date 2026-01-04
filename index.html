@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OurVows - Diário de Planejamento do Casamento</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1 class="logo"><button type="button" id="home-button" class="logo-button">OurVows</button></h1>
+            <p class="subtitle">Diário de Planejamento do Casamento</p>
+        </div>
+    </header>
+
+    <nav class="navigation">
+        <div class="container">
+            <button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="nav-list">Menu</button>
+            <ul class="nav-list" id="nav-list">
+                <li><a href="#dashboard" class="nav-link active" data-section="dashboard">Dashboard</a></li>
+                <li><a href="#budget" class="nav-link" data-section="budget">Orçamento</a></li>
+                <li><a href="#vendors" class="nav-link" data-section="vendors">Fornecedores</a></li>
+                <li><a href="#timeline" class="nav-link" data-section="timeline">Linha do tempo</a></li>
+                <li><a href="#notes" class="nav-link" data-section="notes">Notas</a></li>
+                <li><a href="#checklist" class="nav-link" data-section="checklist">Checklist</a></li>
+                <li><a href="#teas" class="nav-link" data-section="teas">Chás</a></li>
+                <li><a href="#calendar" class="nav-link" data-section="calendar">Calendário</a></li>
+                <li><a href="#map" class="nav-link" data-section="map">Mapa</a></li>
+                <li><a href="#home" class="nav-link" data-section="home">Casa/Contas</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="container">
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="section active">
+                <div class="section-header">
+                    <h2 class="section-title">Dashboard</h2>
+                    <div class="journal-decoration"></div>
+                </div>
+                
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <h3>Contagem regressiva</h3>
+                        <div class="countdown">
+                            <div class="countdown-item">
+                                <span class="countdown-value" id="days">--</span>
+                                <span class="countdown-label">dias</span>
+                            </div>
+                            <div class="countdown-item">
+                                <span class="countdown-value" id="hours">--</span>
+                                <span class="countdown-label">horas</span>
+                            </div>
+                        </div>
+                        <input type="date" id="wedding-date" class="date-input">
+                    </div>
+
+                    <div class="card">
+                        <h3>Resumo do orçamento</h3>
+                        <div class="budget-overview">
+                            <div class="budget-item">
+                                <span>Orçamento total:</span>
+                                <span class="budget-value" id="total-budget">R$ 0</span>
+                            </div>
+                            <div class="budget-item">
+                                <span>Já gasto:</span>
+                                <span class="budget-value spent" id="total-spent">R$ 0</span>
+                            </div>
+                            <div class="budget-item">
+                                <span>Restante:</span>
+                                <span class="budget-value remaining" id="total-remaining">R$ 0</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="budget-progress"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Progresso do planejamento</h3>
+                        <div class="progress-stats">
+                            <div class="stat-item">
+                                <span class="stat-value" id="tasks-completed">0</span>
+                                <span class="stat-label">Tarefas concluídas</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value" id="vendors-booked">0</span>
+                                <span class="stat-label">Fornecedores fechados</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value" id="checklist-percentage">0%</span>
+                                <span class="stat-label">Progresso geral</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Budget Section -->
+            <section id="budget" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Orçamento</h2>
+                    <div class="journal-decoration"></div>
+                </div>
+                
+                <div class="budget-container">
+                    <div class="budget-form card">
+                        <h3>Adicionar despesa</h3>
+                        <form id="expense-form">
+                            <div class="form-group">
+                                <label for="expense-category">Categoria</label>
+                                <select id="expense-category" required>
+                                    <option value="">Selecione uma categoria</option>
+                                    <option value="venue">Local</option>
+                                    <option value="catering">Buffet</option>
+                                    <option value="photography">Fotografia</option>
+                                    <option value="videography">Filmagem</option>
+                                    <option value="music">Música</option>
+                                    <option value="flowers">Flores</option>
+                                    <option value="decorations">Decoração</option>
+                                    <option value="attire">Traje</option>
+                                    <option value="rings">Alianças</option>
+                                    <option value="invitations">Convites</option>
+                                    <option value="transportation">Transporte</option>
+                                    <option value="other">Outros</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="expense-description">Descrição</label>
+                                <input type="text" id="expense-description" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="expense-estimated">Previsto</label>
+                                    <input type="number" id="expense-estimated" step="0.01" min="0" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="expense-paid">Pago</label>
+                                    <input type="number" id="expense-paid" step="0.01" min="0">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="expense-status">Status</label>
+                                <select id="expense-status">
+                                    <option value="pending">Pendente</option>
+                                    <option value="paid">Pago</option>
+                                    <option value="installments">Parcelado</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn-primary">Adicionar despesa</button>
+                        </form>
+                    </div>
+
+                    <div class="budget-list card">
+                        <h3>Despesas</h3>
+                        <div class="expense-summary">
+                            <div class="summary-item">
+                                <span>Total previsto:</span>
+                                <span id="summary-estimated">R$ 0</span>
+                            </div>
+                            <div class="summary-item">
+                                <span>Total pago:</span>
+                                <span id="summary-paid">R$ 0</span>
+                            </div>
+                        </div>
+                        <div class="expense-table-container">
+                            <table class="expense-table">
+                                <thead>
+                                    <tr>
+                                        <th>Categoria</th>
+                                        <th>Descrição</th>
+                                        <th>Previsto</th>
+                                        <th>Pago</th>
+                                        <th>Status</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="expense-list">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Vendors Section -->
+            <section id="vendors" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Fornecedores</h2>
+                    <div class="journal-decoration"></div>
+                </div>
+                
+                <div class="vendors-container">
+                    <div class="vendor-form card">
+                        <h3>Adicionar fornecedor</h3>
+                        <form id="vendor-form">
+                            <div class="form-group">
+                                <label for="vendor-name">Nome do fornecedor</label>
+                                <input type="text" id="vendor-name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="vendor-service">Tipo de serviço</label>
+                                <select id="vendor-service" required>
+                                    <option value="">Selecione um serviço</option>
+                                    <option value="venue">Local</option>
+                                    <option value="catering">Buffet</option>
+                                    <option value="photography">Fotografia</option>
+                                    <option value="videography">Filmagem</option>
+                                    <option value="music">Música</option>
+                                    <option value="flowers">Flores</option>
+                                    <option value="decorations">Decoração</option>
+                                    <option value="attire">Traje</option>
+                                    <option value="rings">Alianças</option>
+                                    <option value="invitations">Convites</option>
+                                    <option value="transportation">Transporte</option>
+                                    <option value="other">Outros</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="vendor-contact">Contato</label>
+                                <input type="text" id="vendor-contact">
+                            </div>
+                            <div class="form-group">
+                                <label for="vendor-phone">Telefone</label>
+                                <input type="tel" id="vendor-phone">
+                            </div>
+                            <div class="form-group">
+                                <label for="vendor-email">E-mail</label>
+                                <input type="email" id="vendor-email">
+                            </div>
+                            <div class="form-group">
+                                <label for="vendor-instagram">Instagram (link)</label>
+                                <input type="url" id="vendor-instagram" placeholder="https://www.instagram.com/...">
+                            </div>
+                            <div class="form-group">
+                                <label for="vendor-website">Site (link)</label>
+                                <input type="url" id="vendor-website" placeholder="https://...">
+                            </div>
+                            <div class="form-group">
+                                <label for="vendor-price">Valor combinado</label>
+                                <input type="number" id="vendor-price" step="0.01" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="vendor-notes">Observações</label>
+                                <textarea id="vendor-notes" rows="3"></textarea>
+                            </div>
+                            <button type="submit" class="btn-primary">Adicionar fornecedor</button>
+                        </form>
+                    </div>
+
+                    <div class="vendor-list card">
+                        <h3>Lista de fornecedores</h3>
+                        <div class="vendor-grid" id="vendor-list">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Timeline Section -->
+            <section id="timeline" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Linha do tempo</h2>
+                    <div class="journal-decoration"></div>
+                </div>
+                
+                <div class="timeline-container">
+                    <div class="timeline-form card">
+                        <h3>Adicionar tarefa</h3>
+                        <form id="timeline-form">
+                            <div class="form-group">
+                                <label for="task-month">Mês</label>
+                                <input type="month" id="task-month" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="task-description">Tarefa</label>
+                                <input type="text" id="task-description" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="task-status">Status</label>
+                                <select id="task-status">
+                                    <option value="pending">Pendente</option>
+                                    <option value="in-progress">Em andamento</option>
+                                    <option value="completed">Concluído</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn-primary">Adicionar tarefa</button>
+                        </form>
+                    </div>
+
+                    <div class="timeline-display card">
+                        <h3>Cronograma do planejamento</h3>
+                        <div class="timeline" id="timeline-list">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Notes Section -->
+            <section id="notes" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Notas</h2>
+                    <div class="journal-decoration"></div>
+                </div>
+                
+                <div class="notes-container">
+                    <div class="notes-form card">
+                        <h3>Adicionar nota</h3>
+                        <form id="notes-form">
+                            <div class="form-group">
+                                <label for="note-type">Tipo de nota</label>
+                                <select id="note-type">
+                                    <option value="text">Texto</option>
+                                    <option value="list">Checklist</option>
+                                    <option value="idea">Ideia</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="note-title">Título</label>
+                                <input type="text" id="note-title" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="note-content">Conteúdo</label>
+                                <textarea id="note-content" rows="6" placeholder="Escreva suas notas aqui... Use * para bullet points e [ ] para checkboxes"></textarea>
+                            </div>
+                            <button type="submit" class="btn-primary">Adicionar nota</button>
+                        </form>
+                    </div>
+
+                    <div class="notes-display card">
+                        <h3>Notas do diário</h3>
+                        <div class="notes-grid" id="notes-list">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Checklist Section -->
+            <section id="checklist" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Checklist do casamento</h2>
+                    <div class="journal-decoration"></div>
+                </div>
+                
+                <div class="checklist-container">
+                    <div class="checklist-form card">
+                        <h3>Adicionar item</h3>
+                        <form id="checklist-form">
+                            <div class="form-group">
+                                <label for="checklist-category">Categoria</label>
+                                <select id="checklist-category" required>
+                                    <option value="">Selecione uma categoria</option>
+                                    <option value="pre-planning">Pré-planejamento</option>
+                                    <option value="venue">Local e buffet</option>
+                                    <option value="photography">Foto e vídeo</option>
+                                    <option value="attire">Trajes e acessórios</option>
+                                    <option value="flowers">Flores e decoração</option>
+                                    <option value="music">Música e entretenimento</option>
+                                    <option value="guests">Convidados e convites</option>
+                                    <option value="documentation">Documentação</option>
+                                    <option value="day-of">Dia do casamento</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="checklist-item">Item</label>
+                                <input type="text" id="checklist-item" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="checklist-priority">Prioridade</label>
+                                <select id="checklist-priority">
+                                    <option value="high">Alta</option>
+                                    <option value="medium">Média</option>
+                                    <option value="low">Baixa</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn-primary">Adicionar</button>
+                        </form>
+                    </div>
+
+                    <div class="checklist-display card">
+                        <h3>Tarefas do casamento</h3>
+                        <div class="checklist-progress">
+                            <div class="progress-text">
+                                <span id="checklist-completed">0</span> de <span id="checklist-total">0</span> concluídos
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="checklist-progress-bar"></div>
+                            </div>
+                        </div>
+                        <div class="checklist-categories" id="checklist-list">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="teas" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Chás</h2>
+                    <div class="journal-decoration"></div>
+                </div>
+
+                <div class="two-column">
+                    <div class="card">
+                        <h3>Adicionar presente</h3>
+                        <form id="gift-form">
+                            <div class="form-group">
+                                <label for="gift-event">Evento</label>
+                                <select id="gift-event" required>
+                                    <option value="">Selecione</option>
+                                    <option value="cha-de-panela">Chá de panela</option>
+                                    <option value="casa-nova">Casa nova</option>
+                                    <option value="lingerie">Lingerie</option>
+                                    <option value="outros">Outros</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="gift-link">Link do item</label>
+                                <input type="url" id="gift-link" placeholder="https://..." required>
+                            </div>
+                            <div class="form-group">
+                                <label for="gift-title">Nome do item</label>
+                                <input type="text" id="gift-title" placeholder="(tenta preencher automaticamente)" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="gift-price">Valor (R$)</label>
+                                <input type="number" id="gift-price" step="0.01" min="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="gift-image">Foto do item</label>
+                                <input type="file" id="gift-image" accept="image/*">
+                            </div>
+                            <button type="submit" class="btn-primary">Adicionar</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="gift-header">
+                        <div>
+                            <h3>Lista de presentes</h3>
+                            <div class="meta" id="gift-view-hint"></div>
+                        </div>
+                        <div class="gift-toolbar">
+                            <label class="meta" for="gift-filter">Filtrar evento</label>
+                            <select id="gift-filter" class="select-compact">
+                                <option value="all">Todos</option>
+                                <option value="cha-de-panela">Chá de panela</option>
+                                <option value="casa-nova">Casa nova</option>
+                                <option value="lingerie">Lingerie</option>
+                                <option value="outros">Outros</option>
+                            </select>
+                            <button type="button" id="gift-share-link" class="btn-secondary btn-share">Copiar link p/ convidados</button>
+                        </div>
+                    </div>
+                    <div id="gift-list" class="gift-grid"></div>
+                </div>
+            </section>
+
+            <section id="calendar" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Calendário</h2>
+                    <div class="journal-decoration"></div>
+                </div>
+
+                <div class="two-column">
+                    <div class="card">
+                        <h3>Adicionar lembrete</h3>
+                        <form id="calendar-form">
+                            <div class="form-group">
+                                <label for="cal-title">Título</label>
+                                <input type="text" id="cal-title" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="cal-date">Data</label>
+                                    <input type="date" id="cal-date" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="cal-time">Horário</label>
+                                    <input type="time" id="cal-time">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="cal-color">Cor</label>
+                                <input type="color" id="cal-color" value="#c8b8a3">
+                            </div>
+                            <div class="form-group">
+                                <label for="cal-notes">Observações</label>
+                                <textarea id="cal-notes" rows="3"></textarea>
+                            </div>
+                            <button type="submit" class="btn-primary">Adicionar</button>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <h3>Agenda</h3>
+                        <div id="calendar-root" class="calendar-root"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="map" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Mapa</h2>
+                    <div class="journal-decoration"></div>
+                </div>
+
+                <div class="two-column">
+                    <div class="card">
+                        <h3>Adicionar marcador</h3>
+                        <form id="map-form">
+                            <div class="form-group">
+                                <label for="map-type">Tipo</label>
+                                <select id="map-type" required>
+                                    <option value="">Selecione</option>
+                                    <option value="fornecedor">Fornecedor</option>
+                                    <option value="local">Local do casamento</option>
+                                    <option value="outro">Outro</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="map-title">Nome</label>
+                                <input type="text" id="map-title" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="map-address">Endereço (buscar no mapa)</label>
+                                <input type="text" id="map-address" placeholder="Ex.: Rua, número, cidade - UF">
+                            </div>
+                            <button type="button" class="btn-secondary w-full mb-1" id="map-geocode">Buscar endereço e preencher coordenadas</button>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="map-lat">Latitude</label>
+                                    <input type="number" id="map-lat" step="0.000001" placeholder="-23.550520" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="map-lng">Longitude</label>
+                                    <input type="number" id="map-lng" step="0.000001" placeholder="-46.633308" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="map-notes">Observações</label>
+                                <textarea id="map-notes" rows="3"></textarea>
+                            </div>
+                            <button type="submit" class="btn-primary">Adicionar</button>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <h3>Mapa</h3>
+                        <div id="map-root" class="map-root"></div>
+                        <div id="map-list" class="stack mt-1"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="home" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Casa / Contas</h2>
+                    <div class="journal-decoration"></div>
+                </div>
+
+                <div class="two-column">
+                    <div class="card">
+                        <h3>Adicionar conta</h3>
+                        <form id="home-expense-form">
+                            <div class="form-group">
+                                <label for="home-type">Tipo</label>
+                                <select id="home-type" required>
+                                    <option value="">Selecione</option>
+                                    <option value="fatura">Fatura</option>
+                                    <option value="luz">Luz</option>
+                                    <option value="agua">Água</option>
+                                    <option value="internet">Internet</option>
+                                    <option value="celular">Celular</option>
+                                    <option value="outros">Outros</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="home-desc">Descrição</label>
+                                <input type="text" id="home-desc" placeholder="Ex.: fatura Nubank, Vivo fibra" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="home-amount">Valor</label>
+                                    <input type="number" id="home-amount" step="0.01" min="0" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="home-due">Vencimento</label>
+                                    <input type="date" id="home-due" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="home-status">Status</label>
+                                <select id="home-status">
+                                    <option value="pending">Pendente</option>
+                                    <option value="paid">Pago</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn-primary">Adicionar</button>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <h3>Contas</h3>
+                        <div id="home-summary" class="stack"></div>
+                        <div id="home-expense-list" class="stack"></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>OurVows © 2024 - Seu diário de planejamento do casamento</p>
+        </div>
+    </footer>
+
+    <div id="link-modal" class="modal" aria-hidden="true">
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="link-modal-title">
+            <div class="modal-header">
+                <h3 id="link-modal-title">Visualização</h3>
+                <button type="button" class="modal-close" id="link-modal-close">Fechar</button>
+            </div>
+            <div class="modal-body">
+                <div id="link-modal-message" class="modal-message hidden"></div>
+                <iframe id="link-modal-iframe" class="modal-iframe" title="Visualização do link" loading="lazy"></iframe>
+            </div>
+            <div class="modal-footer">
+                <a id="link-modal-open-external" class="btn-primary" href="#" target="_blank" rel="noopener noreferrer">Abrir no navegador</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="script.js"></script>
+</body>
+</html>
