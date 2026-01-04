@@ -98,6 +98,7 @@ class OurVowsApp {
         this.initSupabaseClient();
         await this.syncStateFromSupabase();
         this.setupEventListeners();
+        await this.updateGifts(true);
         this.updateDashboard();
         this.startCountdown();
     }
@@ -164,26 +165,33 @@ class OurVowsApp {
         const remoteUpdatedAt = data?.updated_at || null;
         const remotePayload = data?.data || null;
 
+        const sanitizedPayload = remotePayload && typeof remotePayload === 'object'
+            ? { ...remotePayload }
+            : null;
+        if (sanitizedPayload) {
+            delete sanitizedPayload.gifts;
+        }
+
         const localRemoteUpdatedAt = localStorage.getItem('ourVowsRemoteUpdatedAt');
         const localRemoteMs = localRemoteUpdatedAt ? Date.parse(localRemoteUpdatedAt) : 0;
         const remoteMs = remoteUpdatedAt ? Date.parse(remoteUpdatedAt) : 0;
 
-        if (remotePayload && remoteMs && remoteMs > localRemoteMs) {
+        if (sanitizedPayload && remoteMs && remoteMs > localRemoteMs) {
             this.data = {
                 ...this.data,
-                ...(remotePayload || {}),
+                ...(sanitizedPayload || {}),
                 budget: {
                     ...this.data.budget,
-                    ...((remotePayload || {}).budget || {})
+                    ...((sanitizedPayload || {}).budget || {})
                 },
-                vendors: (remotePayload || {}).vendors || [],
-                timeline: (remotePayload || {}).timeline || [],
-                notes: (remotePayload || {}).notes || [],
-                checklist: (remotePayload || {}).checklist || [],
-                gifts: (remotePayload || {}).gifts || [],
-                calendar: (remotePayload || {}).calendar || [],
-                mapMarkers: (remotePayload || {}).mapMarkers || [],
-                homeExpenses: (remotePayload || {}).homeExpenses || []
+                vendors: (sanitizedPayload || {}).vendors || [],
+                timeline: (sanitizedPayload || {}).timeline || [],
+                notes: (sanitizedPayload || {}).notes || [],
+                checklist: (sanitizedPayload || {}).checklist || [],
+                gifts: this.data.gifts || [],
+                calendar: (sanitizedPayload || {}).calendar || [],
+                mapMarkers: (sanitizedPayload || {}).mapMarkers || [],
+                homeExpenses: (sanitizedPayload || {}).homeExpenses || []
             };
             this.saveDataLocalOnly();
             localStorage.setItem('ourVowsRemoteUpdatedAt', remoteUpdatedAt);
@@ -206,9 +214,10 @@ class OurVowsApp {
         const sb = this.supabaseClient || this.initSupabaseClient();
         if (!sb) return false;
 
+        const stateData = this.getStateDataForSupabase();
         const payload = {
             id: 'default',
-            data: this.data
+            data: stateData
         };
 
         const { data, error } = await sb
@@ -224,6 +233,13 @@ class OurVowsApp {
             this.lastRemoteUpdatedAt = updatedAt;
         }
         return true;
+    }
+
+    getStateDataForSupabase() {
+        const data = this.data && typeof this.data === 'object' ? this.data : {};
+        const cloned = { ...data };
+        delete cloned.gifts;
+        return cloned;
     }
 
     canWriteSupabaseState() {
@@ -499,11 +515,45 @@ class OurVowsApp {
 
         document.body.classList.toggle('guest-mode', this.viewMode === 'guest');
 
+        const guestTitle = document.getElementById('guest-gift-title');
+        const guestSubtitle = document.getElementById('guest-gift-subtitle');
+        const listTitle = document.getElementById('gift-list-title');
+        if (guestTitle) {
+            const hasSpecificEvent = this.viewMode === 'guest' && this.guestEventFilter && this.guestEventFilter !== 'all';
+            guestTitle.textContent = hasSpecificEvent
+                ? this.getGiftEventLabel(this.guestEventFilter)
+                : 'Lista de presentes';
+        }
+        if (guestSubtitle) {
+            guestSubtitle.textContent = '';
+        }
+        if (listTitle) {
+            const hasSpecificEvent = this.viewMode === 'guest' && this.guestEventFilter && this.guestEventFilter !== 'all';
+            listTitle.textContent = hasSpecificEvent
+                ? this.getGiftEventLabel(this.guestEventFilter)
+                : 'Lista de presentes';
+        }
+
         const hint = document.getElementById('gift-view-hint');
         if (hint) {
             hint.textContent = this.viewMode === 'guest'
                 ? 'Modo Convidado: selecione e reserve um presente.'
                 : 'Modo Casal: adicione itens e gerencie a lista.';
+        }
+
+        const teasSection = document.getElementById('teas');
+        const teasHeader = teasSection?.querySelector('.section-header');
+        const toolbar = teasSection?.querySelector('.gift-toolbar');
+        if (this.viewMode === 'guest') {
+            if (teasHeader) teasHeader.classList.add('hidden');
+            if (toolbar) toolbar.classList.add('hidden');
+            if (hint) hint.classList.add('hidden');
+            if (guestSubtitle) guestSubtitle.classList.add('hidden');
+        } else {
+            if (teasHeader) teasHeader.classList.remove('hidden');
+            if (toolbar) toolbar.classList.remove('hidden');
+            if (hint) hint.classList.remove('hidden');
+            if (guestSubtitle) guestSubtitle.classList.remove('hidden');
         }
 
         const settingsForm = document.getElementById('gift-settings-form');
@@ -531,7 +581,6 @@ class OurVowsApp {
         }
 
         if (this.viewMode === 'guest') {
-            const teasSection = document.getElementById('teas');
             if (teasSection && !teasSection.classList.contains('active')) {
                 this.showSection('teas');
             }
